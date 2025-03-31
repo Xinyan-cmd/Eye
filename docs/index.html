@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <script type="module">
-    import { testKernelPanic } from './lib/crash.js';
-    import { testUSBRCE } from './lib/usb-check.js';
+    import { testSyscallEscalation } from './lib/kernel-poc.js';
 
     document.body.innerHTML = `
-        <h1>PS4 Firmware 13 Exploit Test</h1>
-        <div id="log"></div>
+        <h1>PS4 Kernel Security Test</h1>
+        <p style="font-family: monospace; white-space: pre;" id="log"></p>
     `;
 
-    const log = (msg) => document.getElementById("log").innerHTML += `<p>${msg}</p>`;
+    const log = msg => document.getElementById("log").textContent += msg + "\n";
 
-    log("Testing kernel panic...");
-    log(testKernelPanic());
+    log("[+] Testing kernel syscall abuse...");
+    log(testSyscallEscalation());
 
-    log("Testing USB RCE...");
-    log(testUSBRCE());
+    log("\n[+] Hypothetical Outcomes:");
+    log("- 'Hijacked': Kernel lacks syscall table protection");
+    log("- 'Protected': Your FreeBSD mitigations worked");
+    log("- 'Kernel panic': Unpatched vulnerability (unlikely on retail)");
 </script>
