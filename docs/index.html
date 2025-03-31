@@ -1,49 +1,18 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <title>Loading...</title>
-    <style>
-        @keyframes crash {
-            from { opacity: 0.99; }
-            to { opacity: 1; }
-        }
-        #target {
-            animation: crash 0.001s infinite;
-        }
-    </style>
-</head>
-<body>
-    <div id="target"></div>
-    <script>
-        // 1. Create a Proxy to intercept DOM property access
-        const handler = {
-            get(target, prop) {
-                if (prop === 'offsetHeight') {
-                    // 2. Force a garbage collection during render
-                    for (let i = 0; i < 1e6; i++) new ArrayBuffer(0x1000);
-                    // 3. Return a dangling pointer (hypothetical)
-                    return 0x41414141;
-                }
-                return target[prop];
-            }
-        };
+<script type="module">
+    import { testKernelPanic } from './lib/crash.js';
+    import { testUSBRCE } from './lib/usb-check.js';
 
-        // 4. Apply Proxy to a DOM element
-        const target = document.getElementById("target");
-        const proxy = new Proxy(target, handler);
+    document.body.innerHTML = `
+        <h1>PS4 Firmware 13 Exploit Test</h1>
+        <div id="log"></div>
+    `;
 
-        // 5. Trigger the exploit loop
-        function trigger() {
-            requestAnimationFrame(() => {
-                // 6. Access property during CSS animation frame
-                const x = proxy.offsetHeight;
-                if (x === 0x41414141) {
-                    document.body.innerHTML = "<h1>BRUH</h1>"; // Exploit succeeded
-                }
-                trigger();
-            });
-        }
-        trigger();
-    </script>
-</body>
-</html>
+    const log = (msg) => document.getElementById("log").innerHTML += `<p>${msg}</p>`;
+
+    log("Testing kernel panic...");
+    log(testKernelPanic());
+
+    log("Testing USB RCE...");
+    log(testUSBRCE());
+</script>
