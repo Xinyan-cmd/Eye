@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<script>
+  function triggerJITBug() {
+    let arr = [1.1, 2.2, 3.3];  
+    let tmp = {};
+
+    // Force JIT compilation by repeating
+    for (let i = 0; i < 100000; i++) {
+      arr[i] = {};  // Potential type confusion?
+      tmp.x = arr[i];
+    }
+
+    // Check for unexpected behavior
+    if (typeof arr[0] !== 'number') {
+      console.log("[!] JIT Type Confusion Detected");
+    } else {
+      console.log("[✓] No JIT Bug Found");
+    }
+  }
+  triggerJITBug();
+</script>
