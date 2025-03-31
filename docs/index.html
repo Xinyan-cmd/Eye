@@ -1,46 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PS4 WebKit Tests</title>
+    <title>Loading...</title>
     <style>
-        body { font-family: monospace; background: #111; color: #0f0; }
-        #log { white-space: pre; margin: 20px; }
+        @keyframes crash {
+            from { opacity: 0.99; }
+            to { opacity: 1; }
+        }
+        #target {
+            animation: crash 0.001s infinite;
+        }
     </style>
 </head>
 <body>
-    <h1>PS4 WebKit Exploit Tests</h1>
-    <div id="log"></div>
-
-    <script src="/lib/utils.js"></script>
-    <script src="/lib/spray.js"></script>
-    
-    <!-- Load exploits dynamically -->
+    <div id="target"></div>
     <script>
-        const exploits = [
-            '/exploits/jit-confusion.js',
-            '/exploits/arraybuffer-oob.js',
-            '/exploits/dom-uaf.js',
-            '/exploits/wasm-rwx.js',
-            '/exploits/css-shader.js'
-        ];
-
-        async function runTests() {
-            log("Starting tests...\n");
-            
-            for (const url of exploits) {
-                try {
-                    await import(url).then(module => {
-                        log(`[+] ${module.testName}: ${module.runTest()}`);
-                    });
-                } catch (e) {
-                    log(`[-] Failed to load: ${url}`);
+        // 1. Create a Proxy to intercept DOM property access
+        const handler = {
+            get(target, prop) {
+                if (prop === 'offsetHeight') {
+                    // 2. Force a garbage collection during render
+                    for (let i = 0; i < 1e6; i++) new ArrayBuffer(0x1000);
+                    // 3. Return a dangling pointer (hypothetical)
+                    return 0x41414141;
                 }
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Delay between tests
+                return target[prop];
             }
-        }
+        };
 
-        // Start after DOM loads
-        window.onload = runTests;
+        // 4. Apply Proxy to a DOM element
+        const target = document.getElementById("target");
+        const proxy = new Proxy(target, handler);
+
+        // 5. Trigger the exploit loop
+        function trigger() {
+            requestAnimationFrame(() => {
+                // 6. Access property during CSS animation frame
+                const x = proxy.offsetHeight;
+                if (x === 0x41414141) {
+                    document.body.innerHTML = "<h1>BRUH</h1>"; // Exploit succeeded
+                }
+                trigger();
+            });
+        }
+        trigger();
     </script>
 </body>
 </html>
