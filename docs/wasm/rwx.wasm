@@ -1,6 +1,0 @@
-(module
-  (import "env" "crash" (func $crash))  ;; Import JS crash function
-  (func (export "exploit")
-    call $crash  ;; Trigger controlled crash if executed
-  )
-)
